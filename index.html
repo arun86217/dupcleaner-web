@@ -437,10 +437,19 @@ async function scanDirectory(rootHandle, excludedNames, extFilter, onFile, stopR
 }
 
 // ─── Finder ───────────────────────────────────────────────────────────────────
+// Run `fn` over `items` with at most `limit` concurrent executions at once.
+async function withConcurrency(items, limit, fn) {
+  const queue = [...items];
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (queue.length) await fn(queue.shift());
+  }));
+}
+
 async function findDuplicates(files, useCache, onProgress, stopRef) {
-  // Pass 1: group by exact size
+  // Pass 1: group by exact size — skip zero-byte files (all identical, never useful)
   const bySize = new Map();
   for (const f of files) {
+    if (f.size === 0) continue;
     if (!bySize.has(f.size)) bySize.set(f.size, []);
     bySize.get(f.size).push(f);
   }
@@ -453,12 +462,15 @@ async function findDuplicates(files, useCache, onProgress, stopRef) {
 
   if (total === 0) return { groups: [], totalFiles: files.length };
 
+  // Read concurrency: cap at 32 simultaneous file reads to avoid OOM on large scans.
+  // Hashing concurrency is capped separately by WorkerPool (one slot per CPU core).
+  const READ_CONCURRENCY = 32;
   const poolSize = Math.min(navigator.hardwareConcurrency || 4, 8);
   const pool = new WorkerPool(poolSize);
-  Log.info(`Hashing with ${poolSize} workers…`);
+  Log.info(`Hashing with ${poolSize} workers, read concurrency ${READ_CONCURRENCY}…`);
 
-  // Pass 2: hash all candidates in parallel across the worker pool
-  await Promise.all(candidates.map(async entry => {
+  // Pass 2: hash candidates — bounded concurrency so we never hold 200k buffers in RAM
+  await withConcurrency(candidates, READ_CONCURRENCY, async entry => {
     if (stopRef.stop) return;
     try {
       let sha = useCache ? await Cache.get(entry.path, entry.size, entry.mtime) : null;
@@ -475,7 +487,7 @@ async function findDuplicates(files, useCache, onProgress, stopRef) {
     } catch(e) { Log.warn(`Hash failed ${entry.path}: ${e.message}`); }
     done++;
     onProgress?.(done, total);
-  }));
+  });
 
   pool.terminate();
 
