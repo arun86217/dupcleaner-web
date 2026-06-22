@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DupCleaner Pro</title>
+<style>
+:root {
+  --bg:       #0f1117;
+  --bg2:      #1a1d2e;
+  --bg3:      #242840;
+  --border:   #2e3355;
+  --text:     #e2e8f0;
+  --muted:    #8892b0;
+  --accent:   #6366f1;
+  --accent-h: #818cf8;
+  --danger:   #ef4444;
+  --danger-h: #f87171;
+  --success:  #22c55e;
+  --warn:     #f59e0b;
+  --r:        8px;
+  --font:     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}
+body{display:grid;grid-template-rows:56px 1fr;overflow:hidden}
+
+/* ── Header ── */
+header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 24px;gap:12px;
+}
+header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
+header span{font-size:12px;color:var(--muted);background:var(--bg3);
+  padding:2px 8px;border-radius:20px}
+.browser-note{margin-left:auto;font-size:12px;color:var(--warn)}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:280px 1fr;height:100%;overflow:hidden}
+
+/* ── Sidebar ── */
+aside{
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sidebar-scroll{flex:1;overflow-y:auto;padding:16px}
+.sidebar-scroll::-webkit-scrollbar{width:4px}
+.sidebar-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.section-title{font-size:11px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+
+.source-item{
+  display:flex;align-items:center;gap:6px;padding:6px 8px;
+  background:var(--bg3);border-radius:var(--r);margin-bottom:4px;
+  font-size:12px;color:var(--text);
+}
+.source-item .source-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.source-item button{flex-shrink:0;background:none;border:none;color:var(--muted);
+  cursor:pointer;padding:2px 4px;border-radius:4px;font-size:13px;line-height:1}
+.source-item button:hover{color:var(--danger);background:rgba(239,68,68,.1)}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:7px 12px;border-radius:var(--r);border:none;cursor:pointer;
+  font-size:13px;font-weight:500;font-family:var(--font);transition:.15s;
+}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover:not(:disabled){background:var(--border)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent-h)}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover:not(:disabled){background:rgba(239,68,68,.25)}
+.btn-full{width:100%}
+
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;margin-top:10px}
+label:first-child{margin-top:0}
+textarea,input[type=text]{
+  width:100%;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);border-radius:var(--r);padding:7px 10px;
+  font-size:12px;font-family:var(--font);resize:vertical;
+}
+textarea:focus,input:focus{outline:none;border-color:var(--accent)}
+.checkbox-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-top:10px}
+.checkbox-row input{accent-color:var(--accent);width:14px;height:14px}
+
+/* ── Main content ── */
+main{display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Metrics ── */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 20px;
+  border-bottom:1px solid var(--border)}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px}
+.metric .label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.metric .value{font-size:22px;font-weight:700;letter-spacing:-.5px}
+
+/* ── Progress ── */
+.progress-wrap{padding:0 20px 12px;display:none}
+.progress-wrap.visible{display:block}
+.progress-label{font-size:12px;color:var(--muted);margin-bottom:6px}
+.progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:3px;
+  transition:width .1s;width:0%}
+
+/* ── Actions ── */
+.actions-bar{
+  padding:0 20px 12px;display:none;
+  flex-wrap:wrap;gap:8px;align-items:center;
+}
+.actions-bar.visible{display:flex}
+.action-note{font-size:11px;color:var(--muted);margin-left:auto}
+
+/* ── Results ── */
+.results-wrap{flex:1;overflow-y:auto;padding:0 20px}
+.results-wrap::-webkit-scrollbar{width:6px}
+.results-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.results-header{
+  display:grid;grid-template-columns:1fr 80px 80px 160px;
+  padding:6px 12px;font-size:11px;color:var(--muted);font-weight:600;
+  text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:var(--bg);z-index:1;
+}
+.group{border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;overflow:hidden}
+.group-header{
+  display:grid;grid-template-columns:1fr 80px 80px 160px;
+  padding:8px 12px;cursor:pointer;user-select:none;
+  background:var(--bg2);transition:.1s;
+}
+.group-header:hover{background:var(--bg3)}
+.group-header .path{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.group-header .badge{
+  font-size:11px;background:rgba(99,102,241,.2);color:var(--accent-h);
+  border-radius:4px;padding:1px 6px;display:inline-block;margin-left:6px;
+}
+.group-header .size{font-size:12px;color:var(--muted);text-align:right;padding-right:8px}
+.group-header .count{font-size:12px;color:var(--muted);text-align:right;padding-right:8px}
+.group-header .hash{font-size:11px;color:var(--muted);font-family:monospace;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.group-body{display:none;padding:6px 12px 8px;background:var(--bg)}
+.group-body.open{display:block}
+.dup-row{
+  display:flex;align-items:center;padding:5px 0;font-size:12px;
+  border-bottom:1px solid var(--border);color:var(--muted);
+}
+.dup-row:last-child{border-bottom:none}
+.dup-row .kind{
+  font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;
+  margin-right:8px;flex-shrink:0;
+}
+.kind-orig{background:rgba(34,197,94,.15);color:var(--success)}
+.kind-dup{background:rgba(239,68,68,.15);color:var(--danger)}
+.dup-row .dp{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dup-row .dt{color:var(--muted);font-size:11px;margin-left:8px;flex-shrink:0}
+
+.empty-state{
+  text-align:center;padding:60px 20px;color:var(--muted);
+}
+.empty-state .icon{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+
+/* ── Logs ── */
+.log-wrap{
+  height:160px;border-top:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;
+}
+.log-header{
+  padding:6px 20px;font-size:11px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.log-header button{margin-left:auto;background:none;border:none;
+  color:var(--muted);cursor:pointer;font-size:11px;padding:2px 6px;
+  border-radius:3px}
+.log-header button:hover{background:var(--bg3);color:var(--text)}
+#log{flex:1;overflow-y:auto;padding:6px 20px;
+  font-family:monospace;font-size:11px;line-height:1.6;color:var(--muted)}
+#log::-webkit-scrollbar{width:4px}
+#log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.log-info{color:var(--text)}
+.log-warn{color:var(--warn)}
+.log-error{color:var(--danger)}
+
+div.sep{height:1px;background:var(--border);margin:12px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧹 DupCleaner Pro</h1>
+  <span>Web Edition</span>
+  <p class="browser-note">⚠ Requires Chrome / Edge 110+</p>
+</header>
+
+<div class="layout">
+  <!-- ── Sidebar ── -->
+  <aside>
+    <div class="sidebar-scroll">
+      <div class="section-title">Sources</div>
+      <div id="source-list"></div>
+      <button class="btn btn-ghost btn-full" id="btn-add" style="margin-top:6px">+ Add folder</button>
+
+      <div class="sep"></div>
+      <div class="section-title">Settings</div>
+
+      <label for="ext-filter">Extension filter (* = all)</label>
+      <input type="text" id="ext-filter" value="*" placeholder="jpg,png,mp4">
+
+      <label for="exclusions">Excluded folder names (one per line)</label>
+      <textarea id="exclusions" rows="8">venv
+.venv
+env
+node_modules
+.git
+.svn
+__pycache__
+.tox
+.mypy_cache
+.pytest_cache
+.cache
+dist
+build
+.dupcleaner</textarea>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="use-cache" checked>
+        <label for="use-cache" style="margin:0">Use hash cache (faster rescans)</label>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="btn btn-primary btn-full" id="btn-scan">Scan</button>
+      <button class="btn btn-ghost btn-full" id="btn-stop" disabled>Stop</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main>
+    <div class="metrics">
+      <div class="metric"><div class="label">Duplicate Groups</div><div class="value" id="m-groups">—</div></div>
+      <div class="metric"><div class="label">Duplicate Files</div><div class="value" id="m-files">—</div></div>
+      <div class="metric"><div class="label">Recoverable</div><div class="value" id="m-size">—</div></div>
+      <div class="metric"><div class="label">Unique Files</div><div class="value" id="m-unique">—</div></div>
+    </div>
+
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-label" id="progress-label">Scanning…</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+
+    <div class="actions-bar" id="actions-bar">
+      <button class="btn btn-ghost" id="btn-move">📁 Move duplicates → .dupcleaner/duplicates/</button>
+      <button class="btn btn-danger" id="btn-delete">🗑 Delete duplicates</button>
+      <button class="btn btn-ghost" id="btn-report">📄 Export report</button>
+      <span class="action-note" id="action-note"></span>
+    </div>
+
+    <div class="results-wrap" id="results-wrap">
+      <div class="empty-state" id="empty-state">
+        <div class="icon">📂</div>
+        <p>Add source folders and click <strong>Scan</strong> to find duplicates.</p>
+      </div>
+      <div id="results-header" class="results-header" style="display:none">
+        <span>Original (kept)</span>
+        <span>Size</span>
+        <span>Copies</span>
+        <span>SHA-256</span>
+      </div>
+      <div id="groups-list"></div>
+    </div>
+
+    <div class="log-wrap">
+      <div class="log-header">
+        Live Logs
+        <button onclick="document.getElementById('log').innerHTML=''">Clear</button>
+      </div>
+      <div id="log"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const state = {
+  sources: [],        // [{name, handle}]
+  scanning: false,
+  stopFlag: false,
+  result: null,       // {groups, totalFiles}
+};
+
+// ─── Log ──────────────────────────────────────────────────────────────────────
+const Log = {
+  _el: null,
+  _get() { return this._el || (this._el = document.getElementById('log')); },
+  _write(cls, msg) {
+    const el = this._get();
+    const line = document.createElement('div');
+    line.className = cls;
+    const ts = new Date().toLocaleTimeString('en',{hour12:false});
+    line.textContent = `[${ts}] ${msg}`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  },
+  info(m)  { this._write('log-info', m); },
+  warn(m)  { this._write('log-warn', `⚠ ${m}`); },
+  error(m) { this._write('log-error', `✕ ${m}`); },
+  clear()  { this._get().innerHTML = ''; },
+};
+
+// ─── Cache (IndexedDB) ────────────────────────────────────────────────────────
+const Cache = {
+  _db: null,
+  async _open() {
+    if (this._db) return;
+    this._db = await new Promise((res, rej) => {
+      const r = indexedDB.open('dupcleaner_v1', 1);
+      r.onupgradeneeded = e => e.target.result.createObjectStore('h', { keyPath: 'k' });
+      r.onsuccess = e => res(e.target.result);
+      r.onerror = e => rej(e.target.error);
+    });
+  },
+  _key(p, s, m) { return `${p}|${s}|${m}`; },
+  async get(p, s, m) {
+    await this._open();
+    return new Promise(res => {
+      const r = this._db.transaction('h','readonly').objectStore('h').get(this._key(p,s,m));
+      r.onsuccess = e => res(e.target.result?.v ?? null);
+      r.onerror = () => res(null);
+    });
+  },
+  async set(p, s, m, sha) {
+    await this._open();
+    return new Promise(res => {
+      const tx = this._db.transaction('h','readwrite');
+      tx.objectStore('h').put({ k: this._key(p,s,m), v: sha });
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  },
+  async clear() {
+    await this._open();
+    return new Promise(res => {
+      const tx = this._db.transaction('h','readwrite');
+      tx.objectStore('h').clear();
+      tx.oncomplete = res;
+    });
+  },
+};
+
+// ─── Worker Pool ──────────────────────────────────────────────────────────────
+class WorkerPool {
+  constructor(n) {
+    // Inline worker via blob URL — works with file:// and any server
+    const src = `self.onmessage=async({data:{id,buf}})=>{` +
+      `const h=await crypto.subtle.digest('SHA-256',buf);` +
+      `const hex=[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');` +
+      `self.postMessage({id,hex});};`;
+    const url = URL.createObjectURL(new Blob([src], {type:'text/javascript'}));
+    this._w = Array.from({length:n}, () => new Worker(url));
+    URL.revokeObjectURL(url);
+    this._idle = this._w.map((_,i)=>i);
+    this._q = [];
+    this._cb = new Map();
+    this._w.forEach((w,i) => {
+      w.onmessage = ({data:{id,hex}}) => {
+        const cb = this._cb.get(id);
+        this._cb.delete(id);
+        this._idle.push(i);
+        cb?.(hex);
+        this._drain();
+      };
+      w.onerror = e => { Log.error(`Worker ${i}: ${e.message}`); };
+    });
+  }
+  _drain() {
+    while (this._idle.length && this._q.length) {
+      const {id,buf,res} = this._q.shift();
+      const wi = this._idle.shift();
+      this._cb.set(id, res);
+      this._w[wi].postMessage({id,buf}, [buf]);
+    }
+  }
+  hash(buf) {
+    return new Promise(res => {
+      const id = Math.random().toString(36).slice(2);
+      this._q.push({id,buf,res});
+      this._drain();
+    });
+  }
+  terminate() { this._w.forEach(w=>w.terminate()); }
+}
+
+// ─── Scanner ──────────────────────────────────────────────────────────────────
+const DEFAULT_EXCLUDED = new Set([
+  'venv','.venv','env','.env','node_modules','.git','.svn','.hg',
+  '__pycache__','.tox','.mypy_cache','.pytest_cache','.cache',
+  'dist','build','.dupcleaner',
+]);
+
+async function scanDirectory(rootHandle, excludedNames, extFilter, onFile, stopRef) {
+  const excluded = new Set([...DEFAULT_EXCLUDED, ...excludedNames]);
+  const allowedExts = extFilter.trim() === '*' ? null
+    : new Set(extFilter.split(',').map(e=>e.trim().replace(/^\./,''). toLowerCase()).filter(Boolean));
+
+  async function walk(dir, rel) {
+    for await (const [name, entry] of dir.entries()) {
+      if (stopRef.stop) return;
+      if (entry.kind === 'directory') {
+        if (!excluded.has(name)) await walk(entry, rel ? `${rel}/${name}` : name);
+      } else {
+        if (allowedExts) {
+          const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+          if (!allowedExts.has(ext)) continue;
+        }
+        try {
+          const file = await entry.getFile();
+          onFile({
+            name,
+            path: `${rootHandle.name}${rel ? '/'+rel : ''}/${name}`,
+            relativePath: rel ? `${rel}/${name}` : name,
+            handle: entry,
+            parentHandle: dir,
+            rootHandle,
+            rootName: rootHandle.name,
+            size: file.size,
+            mtime: file.lastModified,
+          });
+        } catch(e) { Log.warn(`Skipped ${name}: ${e.message}`); }
+      }
+    }
+  }
+  await walk(rootHandle, '');
+}
+
+// ─── Finder ───────────────────────────────────────────────────────────────────
+async function findDuplicates(files, useCache, onProgress, stopRef) {
+  // Pass 1: group by exact size
+  const bySize = new Map();
+  for (const f of files) {
+    if (!bySize.has(f.size)) bySize.set(f.size, []);
+    bySize.get(f.size).push(f);
+  }
+  const candidates = [...bySize.values()].filter(g=>g.length>1).flat();
+  Log.info(`${files.length} files scanned, ${candidates.length} size-match candidates to hash`);
+
+  const total = candidates.length;
+  let done = 0;
+  const byHash = new Map();
+
+  if (total === 0) return { groups: [], totalFiles: files.length };
+
+  const poolSize = Math.min(navigator.hardwareConcurrency || 4, 8);
+  const pool = new WorkerPool(poolSize);
+  Log.info(`Hashing with ${poolSize} workers…`);
+
+  // Pass 2: hash all candidates in parallel across the worker pool
+  await Promise.all(candidates.map(async entry => {
+    if (stopRef.stop) return;
+    try {
+      let sha = useCache ? await Cache.get(entry.path, entry.size, entry.mtime) : null;
+      if (!sha) {
+        const file = await entry.handle.getFile();
+        const buf = await file.arrayBuffer();
+        sha = await pool.hash(buf);
+        if (useCache && sha) await Cache.set(entry.path, entry.size, entry.mtime, sha);
+      }
+      if (sha) {
+        if (!byHash.has(sha)) byHash.set(sha, []);
+        byHash.get(sha).push(entry);
+      }
+    } catch(e) { Log.warn(`Hash failed ${entry.path}: ${e.message}`); }
+    done++;
+    onProgress?.(done, total);
+  }));
+
+  pool.terminate();
+
+  // Build groups: original = oldest mtime, tie-break alphabetical path
+  const groups = [];
+  for (const [sha, entries] of byHash) {
+    if (entries.length < 2) continue;
+    entries.sort((a,b) => a.mtime - b.mtime || a.path.localeCompare(b.path));
+    groups.push({ sha256: sha, original: entries[0], duplicates: entries.slice(1), size: entries[0].size });
+  }
+  groups.sort((a,b) => b.duplicates.length - a.duplicates.length);
+
+  return { groups, totalFiles: files.length };
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+async function getOrCreateDir(handle, parts) {
+  let cur = handle;
+  for (const p of parts) cur = await cur.getDirectoryHandle(p, {create:true});
+  return cur;
+}
+
+async function moveDuplicates(groups, primaryHandle, onProgress) {
+  let done = 0, failed = 0;
+  const total = groups.reduce((s,g) => s + g.duplicates.length, 0);
+  const dupcRoot = await getOrCreateDir(primaryHandle, ['.dupcleaner', 'duplicates']);
+
+  for (const group of groups) {
+    for (const entry of group.duplicates) {
+      try {
+        const pathParts = entry.relativePath.split('/').slice(0,-1);
+        const destDir = await getOrCreateDir(dupcRoot, [entry.rootName, ...pathParts]);
+        const file = await entry.handle.getFile();
+        const buf = await file.arrayBuffer();
+        const destH = await destDir.getFileHandle(entry.name, {create:true});
+        const w = await destH.createWritable();
+        await w.write(buf); await w.close();
+        await entry.parentHandle.removeEntry(entry.name);
+        Log.info(`Moved: ${entry.path}`);
+        done++;
+      } catch(e) {
+        Log.error(`Move failed ${entry.path}: ${e.message}`);
+        failed++;
+      }
+      onProgress?.(done + failed, total);
+    }
+  }
+  return {done, failed};
+}
+
+async function deleteDuplicates(groups, onProgress) {
+  let done = 0, failed = 0;
+  const total = groups.reduce((s,g) => s + g.duplicates.length, 0);
+  for (const group of groups) {
+    for (const entry of group.duplicates) {
+      try {
+        await entry.parentHandle.removeEntry(entry.name);
+        Log.info(`Deleted: ${entry.path}`);
+        done++;
+      } catch(e) {
+        Log.error(`Delete failed ${entry.path}: ${e.message}`);
+        failed++;
+      }
+      onProgress?.(done + failed, total);
+    }
+  }
+  return {done, failed};
+}
+
+async function saveReports(groups, totalFiles, primaryHandle) {
+  const dir = await getOrCreateDir(primaryHandle, ['.dupcleaner', 'reports']);
+  const rows = groups.flatMap(g => g.duplicates.map(d => ({
+    sha256: g.sha256, original: g.original.path, duplicate: d.path, size_bytes: g.size,
+  })));
+
+  // JSON
+  const jh = await dir.getFileHandle('report.json', {create:true});
+  const jw = await jh.createWritable();
+  await jw.write(JSON.stringify(rows, null, 2)); await jw.close();
+
+  // CSV
+  const csv = ['sha256,original,duplicate,size_bytes',
+    ...rows.map(r=>`"${r.sha256}","${r.original}","${r.duplicate}",${r.size_bytes}`)
+  ].join('\n');
+  const ch = await dir.getFileHandle('report.csv', {create:true});
+  const cw = await ch.createWritable();
+  await cw.write(csv); await cw.close();
+
+  Log.info(`Reports saved to ${primaryHandle.name}/.dupcleaner/reports/`);
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function humanSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const units = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return (bytes / Math.pow(1024, i)).toFixed(i ? 1 : 0) + ' ' + units[i];
+}
+function fmtDate(ms) {
+  return new Date(ms).toLocaleDateString('en', {year:'2-digit',month:'2-digit',day:'2-digit'});
+}
+function getExclusions() {
+  return new Set(
+    document.getElementById('exclusions').value
+      .split('\n').map(s=>s.trim()).filter(Boolean)
+  );
+}
+
+// ─── UI Rendering ─────────────────────────────────────────────────────────────
+function renderSources() {
+  const el = document.getElementById('source-list');
+  if (state.sources.length === 0) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--muted);margin-bottom:6px">No sources added.</p>';
+    return;
+  }
+  el.innerHTML = state.sources.map((s,i) => `
+    <div class="source-item">
+      <span class="source-name" title="${s.name}">📁 ${s.name}</span>
+      <button onclick="removeSource(${i})" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function setProgress(label, pct, visible=true) {
+  const wrap = document.getElementById('progress-wrap');
+  wrap.classList.toggle('visible', visible);
+  document.getElementById('progress-label').textContent = label;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function setMetrics(result) {
+  const totalDup = result ? result.groups.reduce((s,g) => s+g.duplicates.length, 0) : 0;
+  const totalRec = result ? result.groups.reduce((s,g) => s+g.size*g.duplicates.length, 0) : 0;
+  const unique   = result ? result.totalFiles - totalDup : 0;
+
+  document.getElementById('m-groups').textContent = result ? result.groups.length : '—';
+  document.getElementById('m-files').textContent  = result ? totalDup : '—';
+  document.getElementById('m-size').textContent   = result ? humanSize(totalRec) : '—';
+  document.getElementById('m-unique').textContent = result ? unique : '—';
+}
+
+function renderResults(result) {
+  const header = document.getElementById('results-header');
+  const list   = document.getElementById('groups-list');
+  const empty  = document.getElementById('empty-state');
+  const actions= document.getElementById('actions-bar');
+  const note   = document.getElementById('action-note');
+
+  setMetrics(result);
+
+  if (!result || result.groups.length === 0) {
+    header.style.display = 'none';
+    list.innerHTML = '';
+    actions.classList.remove('visible');
+    if (result && result.totalFiles > 0) {
+      empty.innerHTML = '<div class="icon">✅</div><p>No duplicates found.</p>';
+    }
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  header.style.display = 'grid';
+  actions.classList.add('visible');
+
+  const primary = state.sources[0];
+  note.textContent = primary ? `Output: ${primary.name}/.dupcleaner/` : '';
+
+  list.innerHTML = result.groups.map((g, gi) => {
+    const dupRows = [
+      `<div class="dup-row">
+        <span class="kind kind-orig">KEEP</span>
+        <span class="dp" title="${g.original.path}">${g.original.path}</span>
+        <span class="dt">${fmtDate(g.original.mtime)}</span>
+      </div>`,
+      ...g.duplicates.map(d => `
+        <div class="dup-row">
+          <span class="kind kind-dup">DUP</span>
+          <span class="dp" title="${d.path}">${d.path}</span>
+          <span class="dt">${fmtDate(d.mtime)}</span>
+        </div>`),
+    ].join('');
+
+    return `
+      <div class="group" id="g${gi}">
+        <div class="group-header" onclick="toggleGroup(${gi})">
+          <span class="path" title="${g.original.path}">
+            ${g.original.name}<span class="badge">${g.duplicates.length} dup${g.duplicates.length>1?'s':''}</span>
+          </span>
+          <span class="size">${humanSize(g.size)}</span>
+          <span class="count">${g.duplicates.length + 1}</span>
+          <span class="hash">${g.sha256.slice(0,16)}…</span>
+        </div>
+        <div class="group-body" id="gb${gi}">${dupRows}</div>
+      </div>`;
+  }).join('');
+}
+
+function toggleGroup(i) {
+  document.getElementById(`gb${i}`).classList.toggle('open');
+}
+
+function setScanningState(on) {
+  state.scanning = on;
+  document.getElementById('btn-scan').disabled = on;
+  document.getElementById('btn-stop').disabled = !on;
+  document.getElementById('btn-add').disabled = on;
+  document.getElementById('btn-move').disabled = on;
+  document.getElementById('btn-delete').disabled = on;
+  document.getElementById('btn-report').disabled = on;
+}
+
+// ─── App Logic ────────────────────────────────────────────────────────────────
+function removeSource(i) {
+  state.sources.splice(i, 1);
+  renderSources();
+}
+
+document.getElementById('btn-add').addEventListener('click', async () => {
+  if (!window.showDirectoryPicker) {
+    alert('File System Access API not supported. Use Chrome or Edge 110+.');
+    return;
+  }
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    if (!state.sources.find(s => s.name === handle.name)) {
+      state.sources.push({ name: handle.name, handle });
+      renderSources();
+      Log.info(`Added source: ${handle.name}`);
+    }
+  } catch(e) {
+    if (e.name !== 'AbortError') Log.error(`Could not add folder: ${e.message}`);
+  }
+});
+
+document.getElementById('btn-stop').addEventListener('click', () => {
+  state.stopFlag = true;
+  Log.warn('Stop requested…');
+});
+
+document.getElementById('btn-scan').addEventListener('click', async () => {
+  if (state.sources.length === 0) {
+    alert('Add at least one source folder first.');
+    return;
+  }
+
+  Log.clear();
+  state.stopFlag = false;
+  state.result = null;
+  setScanningState(true);
+  setProgress('Scanning files…', 0);
+  document.getElementById('empty-state').style.display = 'none';
+
+  const stopRef = { stop: false };
+  const extFilter = document.getElementById('ext-filter').value;
+  const excluded  = getExclusions();
+  const useCache  = document.getElementById('use-cache').checked;
+  const allFiles  = [];
+
+  try {
+    // Scan all sources
+    for (const src of state.sources) {
+      Log.info(`Scanning: ${src.name}…`);
+      await scanDirectory(
+        src.handle, excluded, extFilter,
+        f => {
+          allFiles.push(f);
+          setProgress(`Scanning… ${allFiles.length} files found`, 0);
+        },
+        stopRef,
+      );
+      if (state.stopFlag) { stopRef.stop = true; break; }
+    }
+
+    if (state.stopFlag) { Log.warn('Scan stopped by user.'); return; }
+
+    Log.info(`Total files found: ${allFiles.length}`);
+    setProgress(`Hashing candidates…`, 0);
+
+    const result = await findDuplicates(allFiles, useCache, (done, total) => {
+      const pct = total ? Math.round(done/total*100) : 0;
+      setProgress(`Hashing ${done}/${total} candidates…`, pct);
+      if (state.stopFlag) stopRef.stop = true;
+    }, stopRef);
+
+    state.result = result;
+
+    // Auto-save reports into first source's .dupcleaner/reports/
+    if (result.groups.length > 0 && state.sources[0]) {
+      await saveReports(result.groups, result.totalFiles, state.sources[0].handle);
+    }
+
+    Log.info(
+      `Done. ${result.groups.length} group(s), ` +
+      `${result.groups.reduce((s,g)=>s+g.duplicates.length,0)} duplicate(s).`
+    );
+    renderResults(result);
+
+  } catch(e) {
+    Log.error(`Scan error: ${e.message}`);
+  } finally {
+    setScanningState(false);
+    setProgress('', 0, false);
+  }
+});
+
+document.getElementById('btn-move').addEventListener('click', async () => {
+  if (!state.result?.groups.length) return;
+  const primary = state.sources[0]?.handle;
+  if (!primary) return;
+
+  if (!confirm(`Move all duplicates to ${state.sources[0].name}/.dupcleaner/duplicates/?\n\nOriginals will be kept. This action can be undone by moving files back.`)) return;
+
+  setScanningState(true);
+  setProgress('Moving duplicates…', 0);
+  try {
+    const {done, failed} = await moveDuplicates(
+      state.result.groups, primary,
+      (n, total) => setProgress(`Moving ${n}/${total}…`, Math.round(n/total*100))
+    );
+    Log.info(`Move complete: ${done} moved, ${failed} failed.`);
+    // Re-scan after move to refresh results
+    document.getElementById('btn-scan').click();
+  } catch(e) {
+    Log.error(`Move error: ${e.message}`);
+    setScanningState(false);
+    setProgress('', 0, false);
+  }
+});
+
+document.getElementById('btn-delete').addEventListener('click', async () => {
+  if (!state.result?.groups.length) return;
+  const total = state.result.groups.reduce((s,g)=>s+g.duplicates.length,0);
+  if (!confirm(`Permanently delete ${total} duplicate file(s)?\n\nOriginals will be kept. This CANNOT be undone.`)) return;
+
+  setScanningState(true);
+  setProgress('Deleting duplicates…', 0);
+  try {
+    const {done, failed} = await deleteDuplicates(
+      state.result.groups,
+      (n, t) => setProgress(`Deleting ${n}/${t}…`, Math.round(n/t*100))
+    );
+    Log.info(`Delete complete: ${done} deleted, ${failed} failed.`);
+    document.getElementById('btn-scan').click();
+  } catch(e) {
+    Log.error(`Delete error: ${e.message}`);
+    setScanningState(false);
+    setProgress('', 0, false);
+  }
+});
+
+document.getElementById('btn-report').addEventListener('click', async () => {
+  if (!state.result || !state.sources[0]) return;
+  try {
+    await saveReports(state.result.groups, state.result.totalFiles, state.sources[0].handle);
+    Log.info('Reports exported.');
+  } catch(e) {
+    Log.error(`Report error: ${e.message}`);
+  }
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderSources();
+if (!window.showDirectoryPicker) {
+  document.querySelector('.browser-note').textContent = '⛔ File System Access API not available — use Chrome or Edge 110+';
+  document.querySelector('.browser-note').style.color = 'var(--danger)';
+}
+Log.info('DupCleaner Pro ready. Add source folders and click Scan.');
+</script>
+</body>
+</html>
