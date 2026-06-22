@@ -624,14 +624,27 @@ async function findDuplicates(files, useCache, onProgress, stopRef, minSizeBytes
   const pool = new WorkerPool(poolSize);
   Log.info(`Hashing with ${poolSize} workers, read concurrency ${READ_CONCURRENCY}…`);
 
+  let permErrors = 0, oomErrors = 0;
+
   // Pass 2: hash candidates — bounded concurrency so we never hold 200k buffers in RAM
   await withConcurrency(candidates, READ_CONCURRENCY, async entry => {
     if (stopRef.stop) return;
     try {
       let sha = useCache ? await Cache.get(entry.path, entry.size, entry.mtime) : null;
       if (!sha) {
-        const file = await entry.handle.getFile();
-        const buf = await file.arrayBuffer();
+        // Helper: read file buffer with one retry on transient lock errors
+        const readBuf = async () => {
+          try {
+            return await (await entry.handle.getFile()).arrayBuffer();
+          } catch(e) {
+            if (e.name === 'NotReadableError') {
+              await new Promise(r => setTimeout(r, 800));
+              return await (await entry.handle.getFile()).arrayBuffer();
+            }
+            throw e;
+          }
+        };
+        const buf = await readBuf();
         sha = await pool.hash(buf);
         if (useCache && sha) await Cache.set(entry.path, entry.size, entry.mtime, sha);
       }
@@ -639,11 +652,26 @@ async function findDuplicates(files, useCache, onProgress, stopRef, minSizeBytes
         if (!byHash.has(sha)) byHash.set(sha, []);
         byHash.get(sha).push(entry);
       }
-    } catch(e) { Log.warn(`Hash failed ${entry.path}: ${e.message}`); }
+    } catch(e) {
+      if (e.name === 'NotReadableError') {
+        permErrors++;
+        Log.warn(`Hash failed (file locked) ${entry.path}`);
+      } else if (e.name === 'QuotaExceededError' || e.message?.includes('memory')) {
+        oomErrors++;
+        Log.warn(`Hash failed (file too large for browser memory) ${entry.path}: ${fmtBytes(entry.size)}`);
+      } else {
+        Log.warn(`Hash failed ${entry.path}: ${e.message}`);
+      }
+    }
     done++;
     bytesProcessed += entry.size;
     onProgress?.(done, total, bytesProcessed, totalBytes);
   });
+
+  if (permErrors > 0)
+    Log.warn(`${permErrors} file(s) skipped — locked by another process. Close antivirus/cloud sync and re-scan to retry.`);
+  if (oomErrors > 0)
+    Log.warn(`${oomErrors} file(s) too large for browser memory — open the Python version to hash files over ~1.5 GB.`);
 
   pool.terminate();
 
