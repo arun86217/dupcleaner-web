@@ -206,6 +206,17 @@ div.sep{height:1px;background:var(--border);margin:12px 0}
       <div class="sep"></div>
       <div class="section-title">Settings</div>
 
+      <label for="min-size">Minimum file size (skip smaller files)</label>
+      <div style="display:flex;gap:6px">
+        <input type="number" id="min-size" value="50" min="0" style="width:80px;flex-shrink:0">
+        <select id="min-size-unit" style="flex:1;background:var(--bg3);border:1px solid var(--border);
+          color:var(--text);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:var(--font)">
+          <option value="1">Bytes</option>
+          <option value="1024" selected>KB</option>
+          <option value="1048576">MB</option>
+        </select>
+      </div>
+
       <label for="ext-filter">Extension filter (* = all)</label>
       <input type="text" id="ext-filter" value="*" placeholder="jpg,png,mp4">
 
@@ -445,14 +456,16 @@ async function withConcurrency(items, limit, fn) {
   }));
 }
 
-async function findDuplicates(files, useCache, onProgress, stopRef) {
-  // Pass 1: group by exact size — skip zero-byte files (all identical, never useful)
+async function findDuplicates(files, useCache, onProgress, stopRef, minSizeBytes = 0) {
+  // Pass 1: group by exact size — skip zero-byte and below-threshold files
   const bySize = new Map();
+  let skippedSmall = 0;
   for (const f of files) {
-    if (f.size === 0) continue;
+    if (f.size === 0 || f.size < minSizeBytes) { skippedSmall++; continue; }
     if (!bySize.has(f.size)) bySize.set(f.size, []);
     bySize.get(f.size).push(f);
   }
+  if (skippedSmall > 0) Log.info(`Skipped ${skippedSmall} file(s) below size threshold`);
   const candidates = [...bySize.values()].filter(g=>g.length>1).flat();
   Log.info(`${files.length} files scanned, ${candidates.length} size-match candidates to hash`);
 
@@ -594,6 +607,11 @@ function getExclusions() {
     document.getElementById('exclusions').value
       .split('\n').map(s=>s.trim()).filter(Boolean)
   );
+}
+function getMinSizeBytes() {
+  const val  = parseFloat(document.getElementById('min-size').value) || 0;
+  const unit = parseInt(document.getElementById('min-size-unit').value, 10);
+  return Math.floor(val * unit);
 }
 
 // ─── UI Rendering ─────────────────────────────────────────────────────────────
@@ -741,9 +759,10 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
   document.getElementById('empty-state').style.display = 'none';
 
   const stopRef = { stop: false };
-  const extFilter = document.getElementById('ext-filter').value;
-  const excluded  = getExclusions();
-  const useCache  = document.getElementById('use-cache').checked;
+  const extFilter    = document.getElementById('ext-filter').value;
+  const excluded     = getExclusions();
+  const useCache     = document.getElementById('use-cache').checked;
+  const minSizeBytes = getMinSizeBytes();
   const allFiles  = [];
 
   try {
@@ -770,7 +789,7 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
       const pct = total ? Math.round(done/total*100) : 0;
       setProgress(`Hashing ${done}/${total} candidates…`, pct);
       if (state.stopFlag) stopRef.stop = true;
-    }, stopRef);
+    }, stopRef, minSizeBytes);
 
     state.result = result;
 
