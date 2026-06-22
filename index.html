@@ -185,6 +185,17 @@ main{display:flex;flex-direction:column;overflow:hidden}
 .log-error{color:var(--danger)}
 
 div.sep{height:1px;background:var(--border);margin:12px 0}
+
+/* ── Resume banner ── */
+#resume-banner{
+  display:none;margin:12px 20px 0;padding:10px 14px;
+  background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);
+  border-radius:var(--r);display:none;align-items:center;gap:10px;flex-shrink:0;
+}
+#resume-banner.visible{display:flex}
+#resume-banner .rb-text{flex:1;font-size:12px;color:var(--text)}
+#resume-banner .rb-text strong{color:var(--accent-h)}
+#resume-banner .rb-actions{display:flex;gap:6px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -250,6 +261,16 @@ build
 
   <!-- ── Main ── -->
   <main>
+    <div id="resume-banner">
+      <div class="rb-text">
+        <strong>📂 Previous session found</strong> — <span id="rb-desc"></span>
+      </div>
+      <div class="rb-actions">
+        <button class="btn btn-primary" id="btn-resume">Restore &amp; Re-scan</button>
+        <button class="btn btn-ghost" id="btn-dismiss-session">Dismiss</button>
+      </div>
+    </div>
+
     <div class="metrics">
       <div class="metric"><div class="label">Duplicate Groups</div><div class="value" id="m-groups">—</div></div>
       <div class="metric"><div class="label">Duplicate Files</div><div class="value" id="m-files">—</div></div>
@@ -361,6 +382,120 @@ const Cache = {
     });
   },
 };
+
+// ─── Session Persistence (separate IDB to avoid version conflicts) ────────────
+const Session = {
+  _db: null,
+  async _open() {
+    if (this._db) return;
+    this._db = await new Promise((res, rej) => {
+      const r = indexedDB.open('dupcleaner_session_v1', 1);
+      r.onupgradeneeded = e => e.target.result.createObjectStore('s', { keyPath: 'k' });
+      r.onsuccess = e => res(e.target.result);
+      r.onerror = e => rej(e.target.error);
+    });
+  },
+  async saveHandles(sources) {
+    if (!sources.length) return;
+    await this._open();
+    return new Promise(res => {
+      const tx = this._db.transaction('s', 'readwrite');
+      tx.objectStore('s').put({ k: 'session', handles: sources.map(s => s.handle), names: sources.map(s => s.name), savedAt: Date.now() });
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  },
+  async load() {
+    await this._open();
+    return new Promise(res => {
+      const r = this._db.transaction('s', 'readonly').objectStore('s').get('session');
+      r.onsuccess = e => res(e.target.result ?? null);
+      r.onerror = () => res(null);
+    });
+  },
+  async clear() {
+    await this._open();
+    return new Promise(res => {
+      const tx = this._db.transaction('s', 'readwrite');
+      tx.objectStore('s').clear();
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  },
+};
+
+// ─── Settings Persistence (localStorage) ─────────────────────────────────────
+function saveSettings() {
+  try {
+    localStorage.setItem('dupcleaner_settings', JSON.stringify({
+      extFilter:   document.getElementById('ext-filter').value,
+      exclusions:  document.getElementById('exclusions').value,
+      minSize:     document.getElementById('min-size').value,
+      minSizeUnit: document.getElementById('min-size-unit').value,
+      useCache:    document.getElementById('use-cache').checked,
+    }));
+  } catch(_) {}
+}
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('dupcleaner_settings');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.extFilter   !== undefined) document.getElementById('ext-filter').value  = s.extFilter;
+    if (s.exclusions  !== undefined) document.getElementById('exclusions').value  = s.exclusions;
+    if (s.minSize     !== undefined) document.getElementById('min-size').value    = s.minSize;
+    if (s.minSizeUnit !== undefined) document.getElementById('min-size-unit').value = s.minSizeUnit;
+    if (s.useCache    !== undefined) document.getElementById('use-cache').checked = s.useCache;
+  } catch(_) {}
+}
+
+// ─── Resume Banner ────────────────────────────────────────────────────────────
+async function checkForSession() {
+  try {
+    const data = await Session.load();
+    if (!data || !data.handles?.length) return;
+    const ago = Math.round((Date.now() - data.savedAt) / 60000);
+    const agoStr = ago < 1 ? 'just now' : ago < 60 ? `${ago}m ago` : `${Math.round(ago/60)}h ago`;
+    document.getElementById('rb-desc').textContent =
+      `${data.handles.length} source(s) saved ${agoStr}`;
+    const banner = document.getElementById('resume-banner');
+    banner.classList.add('visible');
+  } catch(_) {}
+}
+
+document.getElementById('btn-resume').addEventListener('click', async () => {
+  try {
+    const data = await Session.load();
+    if (!data?.handles?.length) return;
+    document.getElementById('resume-banner').classList.remove('visible');
+    let restored = 0;
+    for (let i = 0; i < data.handles.length; i++) {
+      const handle = data.handles[i];
+      try {
+        const perm = await handle.requestPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+          const name = data.names?.[i] ?? handle.name;
+          if (!state.sources.find(s => s.name === name)) {
+            state.sources.push({ name, handle });
+            restored++;
+          }
+        }
+      } catch(_) {}
+    }
+    renderSources();
+    if (restored > 0) {
+      Log.info(`Restored ${restored} source(s) from previous session.`);
+      document.getElementById('btn-scan').click();
+    } else {
+      Log.warn('No sources could be restored — re-grant permission may have been denied.');
+    }
+  } catch(e) {
+    Log.error(`Resume error: ${e.message}`);
+  }
+});
+
+document.getElementById('btn-dismiss-session').addEventListener('click', async () => {
+  document.getElementById('resume-banner').classList.remove('visible');
+  await Session.clear();
+});
 
 // ─── Worker Pool ──────────────────────────────────────────────────────────────
 class WorkerPool {
@@ -721,6 +856,7 @@ function setScanningState(on) {
 function removeSource(i) {
   state.sources.splice(i, 1);
   renderSources();
+  Session.saveHandles(state.sources);
 }
 
 document.getElementById('btn-add').addEventListener('click', async () => {
@@ -733,6 +869,7 @@ document.getElementById('btn-add').addEventListener('click', async () => {
     if (!state.sources.find(s => s.name === handle.name)) {
       state.sources.push({ name: handle.name, handle });
       renderSources();
+      Session.saveHandles(state.sources);
       Log.info(`Added source: ${handle.name}`);
     }
   } catch(e) {
@@ -752,6 +889,8 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
   }
 
   Log.clear();
+  saveSettings();
+  Session.saveHandles(state.sources);
   state.stopFlag = false;
   state.result = null;
   setScanningState(true);
@@ -868,7 +1007,9 @@ document.getElementById('btn-report').addEventListener('click', async () => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+loadSettings();
 renderSources();
+checkForSession();
 if (!window.showDirectoryPicker) {
   document.querySelector('.browser-note').textContent = '⛔ File System Access API not available — use Chrome or Edge 110+';
   document.querySelector('.browser-note').style.color = 'var(--danger)';
