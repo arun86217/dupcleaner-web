@@ -103,7 +103,13 @@ main{display:flex;flex-direction:column;overflow:hidden}
 .progress-label{font-size:12px;color:var(--muted);margin-bottom:6px}
 .progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
 .progress-fill{height:100%;background:var(--accent);border-radius:3px;
-  transition:width .1s;width:0%}
+  transition:width .25s ease;width:0%}
+.progress-fill.hashing{
+  background:linear-gradient(90deg,var(--accent) 0%,#818cf8 50%,var(--accent) 100%);
+  background-size:200% 100%;
+  animation:hash-pulse 1.6s linear infinite;
+}
+@keyframes hash-pulse{from{background-position:100% 0}to{background-position:-100% 0}}
 
 /* ── Actions ── */
 .actions-bar{
@@ -605,7 +611,8 @@ async function findDuplicates(files, useCache, onProgress, stopRef, minSizeBytes
   Log.info(`${files.length} files scanned, ${candidates.length} size-match candidates to hash`);
 
   const total = candidates.length;
-  let done = 0;
+  const totalBytes = candidates.reduce((s, f) => s + f.size, 0);
+  let done = 0, bytesProcessed = 0;
   const byHash = new Map();
 
   if (total === 0) return { groups: [], totalFiles: files.length };
@@ -634,7 +641,8 @@ async function findDuplicates(files, useCache, onProgress, stopRef, minSizeBytes
       }
     } catch(e) { Log.warn(`Hash failed ${entry.path}: ${e.message}`); }
     done++;
-    onProgress?.(done, total);
+    bytesProcessed += entry.size;
+    onProgress?.(done, total, bytesProcessed, totalBytes);
   });
 
   pool.terminate();
@@ -743,6 +751,13 @@ function getExclusions() {
       .split('\n').map(s=>s.trim()).filter(Boolean)
   );
 }
+function fmtBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b/1024).toFixed(1)} KB`;
+  if (b < 1073741824) return `${(b/1048576).toFixed(1)} MB`;
+  return `${(b/1073741824).toFixed(2)} GB`;
+}
+
 function getMinSizeBytes() {
   const val  = parseFloat(document.getElementById('min-size').value) || 0;
   const unit = parseInt(document.getElementById('min-size-unit').value, 10);
@@ -923,12 +938,19 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
 
     Log.info(`Total files found: ${allFiles.length}`);
     setProgress(`Hashing candidates…`, 0);
+    document.getElementById('progress-fill').classList.add('hashing');
+    const hashStart = Date.now();
 
-    const result = await findDuplicates(allFiles, useCache, (done, total) => {
-      const pct = total ? Math.round(done/total*100) : 0;
-      setProgress(`Hashing ${done}/${total} candidates…`, pct);
+    const result = await findDuplicates(allFiles, useCache, (done, total, bytesProcessed, totalBytes) => {
+      const pct = totalBytes ? Math.round(bytesProcessed / totalBytes * 100) : 0;
+      const elapsed = (Date.now() - hashStart) / 1000 || 0.001;
+      const mbps = (bytesProcessed / 1048576 / elapsed).toFixed(0);
+      const processed = fmtBytes(bytesProcessed), ofTotal = fmtBytes(totalBytes);
+      setProgress(`Hashing ${done.toLocaleString()} / ${total.toLocaleString()} files · ${processed} / ${ofTotal} · ${mbps} MB/s`, pct);
       if (state.stopFlag) stopRef.stop = true;
     }, stopRef, minSizeBytes);
+
+    document.getElementById('progress-fill').classList.remove('hashing');
 
     state.result = result;
 
