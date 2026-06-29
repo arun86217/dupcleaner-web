@@ -86,6 +86,13 @@ textarea,input[type=text]{
 textarea:focus,input:focus{outline:none;border-color:var(--accent)}
 .checkbox-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-top:10px}
 .checkbox-row input{accent-color:var(--accent);width:14px;height:14px}
+.cache-stats-row{display:flex;align-items:center;justify-content:space-between;
+  margin-top:5px;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:4px;font-size:11px;color:var(--muted)}
+.cache-clear-btn{background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:11px;font-family:var(--font);padding:0 2px;text-decoration:underline;
+  text-underline-offset:2px}
+.cache-clear-btn:hover{color:var(--danger)}
 
 /* ── Extension filter chips ── */
 .ext-all-row{margin-bottom:6px}
@@ -131,20 +138,67 @@ main{display:flex;flex-direction:column;overflow:hidden}
 .actions-bar.visible{display:flex}
 .action-note{font-size:11px;color:var(--muted);margin-left:auto}
 
+/* ── Controls Bar ── */
+.controls-bar{
+  padding:8px 20px 6px;display:none;flex-direction:column;gap:6px;
+  border-bottom:1px solid var(--border);background:var(--bg2);
+}
+.controls-bar.visible{display:flex}
+.ctrl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctrl-section{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ctrl-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.6px;white-space:nowrap;padding-right:2px}
+.ctrl-sep{width:1px;height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
+.ctrl-btn{
+  font-size:11px;font-weight:600;padding:3px 10px;border-radius:5px;
+  border:1px solid var(--border);background:var(--bg3);color:var(--muted);
+  cursor:pointer;font-family:var(--font);transition:.12s;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:5px;line-height:1.5;
+}
+.ctrl-btn:hover{color:var(--text);border-color:var(--accent)}
+.ctrl-btn.af{background:rgba(99,102,241,.18);color:var(--accent-h);border-color:rgba(99,102,241,.45)}
+.ctrl-btn.ag{background:rgba(34,197,94,.15);color:var(--success);border-color:rgba(34,197,94,.35)}
+.ctrl-btn.ab{background:rgba(139,92,246,.2);color:#a78bfa;border-color:rgba(139,92,246,.4)}
+.ctrl-btn.ay{background:rgba(234,179,8,.12);color:#eab308;border-color:rgba(234,179,8,.35)}
+.ctrl-btn.ap{background:rgba(236,72,153,.15);color:#f472b6;border-color:rgba(236,72,153,.35)}
+.ctrl-count{font-size:10px;background:rgba(0,0,0,.25);padding:1px 5px;border-radius:3px;line-height:1.4}
+/* search row */
+.search-wrap{display:flex;align-items:center;background:var(--bg3);
+  border:1px solid var(--border);border-radius:6px;overflow:hidden;
+  transition:.12s;flex:1;max-width:500px}
+.search-wrap:focus-within{border-color:var(--accent)}
+.search-icon{padding:0 6px 0 8px;color:var(--muted);font-size:12px;flex-shrink:0}
+.search-input{flex:1;background:none;border:none;outline:none;font-size:12px;
+  font-family:var(--font);color:var(--text);padding:5px 4px}
+.search-input::placeholder{color:var(--muted);opacity:.5}
+.search-clear{background:none;border:none;color:var(--muted);cursor:pointer;
+  padding:0 8px;font-size:13px;display:none}
+.search-clear.visible{display:block}
+.search-clear:hover{color:var(--danger)}
+.search-status{font-size:11px;color:var(--muted);white-space:nowrap}
+.search-status.hit{color:var(--success)}
+.search-status.miss{color:var(--danger)}
+.setall-active{color:var(--accent-h) !important}
+.kind-dup.pickable{cursor:pointer;transition:.1s}
+.kind-dup.pickable:hover{background:rgba(34,197,94,.25);color:var(--success);border-color:rgba(34,197,94,.4)}
+.kind-manual{background:rgba(251,191,36,.15);color:#fbbf24;font-size:10px;font-weight:600;
+  padding:1px 5px;border-radius:3px;margin-right:8px;flex-shrink:0}
+.opt-manual-badge{font-size:10px;color:#fbbf24;white-space:nowrap;opacity:.8;padding:0 4px;cursor:default}
+
 /* ── Results ── */
 .results-wrap{flex:1;overflow-y:auto;padding:0 20px}
 .results-wrap::-webkit-scrollbar{width:6px}
 .results-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
 .results-header{
-  display:grid;grid-template-columns:1fr 80px 80px 160px;
+  display:grid;grid-template-columns:1fr 170px 80px 80px 160px;
   padding:6px 12px;font-size:11px;color:var(--muted);font-weight:600;
   text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);
   position:sticky;top:0;background:var(--bg);z-index:1;
 }
 .group{border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;overflow:hidden}
 .group-header{
-  display:grid;grid-template-columns:1fr 80px 80px 160px;
+  display:grid;grid-template-columns:1fr 170px 80px 80px 160px;
   padding:8px 12px;cursor:pointer;user-select:none;
   background:var(--bg2);transition:.1s;
 }
@@ -173,6 +227,23 @@ main{display:flex;flex-direction:column;overflow:hidden}
 .kind-dup{background:rgba(239,68,68,.15);color:var(--danger)}
 .dup-row .dp{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dup-row .dt{color:var(--muted);font-size:11px;margin-left:8px;flex-shrink:0}
+.opt-btns{display:flex;gap:3px;align-items:center;padding:0 6px;
+  onclick-stop:true}
+.opt-btn{
+  font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;
+  border:1px solid var(--border);background:var(--bg3);color:var(--muted);
+  cursor:pointer;font-family:var(--font);transition:.1s;white-space:nowrap;
+  line-height:1.6;
+}
+.opt-btn:hover{color:var(--text);border-color:var(--muted)}
+.opt-btn.active{background:rgba(34,197,94,.15);color:var(--success);border-color:rgba(34,197,94,.35)}
+.opt-btn.skip-btn.active{background:rgba(234,179,8,.12);color:#eab308;border-color:rgba(234,179,8,.35)}
+.group.skipped{border-color:rgba(234,179,8,.25)}
+.group.skipped .group-header .path,
+.group.skipped .group-header .size,
+.group.skipped .group-header .count,
+.group.skipped .group-header .hash{opacity:0.35}
+.skip-note{font-size:11px;color:var(--muted);font-style:italic;padding:4px 2px}
 
 .empty-state{
   text-align:center;padding:60px 20px;color:var(--muted);
@@ -269,6 +340,10 @@ build
         <input type="checkbox" id="use-cache" checked>
         <label for="use-cache" style="margin:0">Use hash cache (faster rescans)</label>
       </div>
+      <div class="cache-stats-row" id="cache-stats-row">
+        <span id="cache-count-label">Checking cache…</span>
+        <button class="cache-clear-btn" id="btn-clear-cache" onclick="clearHashCache()">Clear</button>
+      </div>
     </div>
 
     <div class="sidebar-footer">
@@ -308,13 +383,49 @@ build
       <span class="action-note" id="action-note"></span>
     </div>
 
+    <div class="controls-bar" id="controls-bar">
+      <!-- Row 1: search -->
+      <div class="ctrl-row ctrl-search-row">
+        <span class="ctrl-label">Filter groups</span>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="group-search" class="search-input" list="search-suggestions"
+            placeholder="path fragment — e.g. php websites, backup, 2024…"
+            oninput="setGroupSearch(this.value)">
+          <datalist id="search-suggestions"></datalist>
+          <button class="search-clear" id="search-clear" onclick="clearGroupSearch()" title="Clear search">✕</button>
+        </div>
+        <span class="search-status" id="search-status"></span>
+      </div>
+      <!-- Row 2: actions + mode filter -->
+      <div class="ctrl-row ctrl-action-row">
+        <div class="ctrl-section">
+          <span class="ctrl-label" id="setall-label">Set all</span>
+          <button class="ctrl-btn" onclick="setAllGroupOpts('first')">⬆ Keep First</button>
+          <button class="ctrl-btn" onclick="setAllGroupOpts('last')">⬇ Keep Last</button>
+          <button class="ctrl-btn" onclick="setAllGroupOpts('skip')">⊘ Skip</button>
+          <button class="ctrl-btn" onclick="invertGroupOpts()" title="First↔Last for visible groups">⇄ Invert</button>
+        </div>
+        <div class="ctrl-sep"></div>
+        <div class="ctrl-section">
+          <span class="ctrl-label">Show mode</span>
+          <button class="ctrl-btn af" id="filter-all"    onclick="setGroupFilter('all')">   All        <span class="ctrl-count" id="fc-all">0</span></button>
+          <button class="ctrl-btn"    id="filter-first"  onclick="setGroupFilter('first')"> Keep First  <span class="ctrl-count" id="fc-first">0</span></button>
+          <button class="ctrl-btn"    id="filter-last"   onclick="setGroupFilter('last')">  Keep Last   <span class="ctrl-count" id="fc-last">0</span></button>
+          <button class="ctrl-btn"    id="filter-skip"   onclick="setGroupFilter('skip')">  Skip        <span class="ctrl-count" id="fc-skip">0</span></button>
+          <button class="ctrl-btn"    id="filter-manual" onclick="setGroupFilter('manual')">Pinned      <span class="ctrl-count" id="fc-manual">0</span></button>
+        </div>
+      </div>
+    </div>
+
     <div class="results-wrap" id="results-wrap">
       <div class="empty-state" id="empty-state">
         <div class="icon">📂</div>
         <p>Add source folders and click <strong>Scan</strong> to find duplicates.</p>
       </div>
       <div id="results-header" class="results-header" style="display:none">
-        <span>Original (kept)</span>
+        <span>File</span>
+        <span>Keep</span>
         <span>Size</span>
         <span>Copies</span>
         <span>SHA-256</span>
@@ -430,10 +541,14 @@ const ExtFilter = {
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const state = {
-  sources: [],        // [{name, handle}]
+  sources: [],           // [{name, handle}]
   scanning: false,
   stopFlag: false,
-  result: null,       // {groups, totalFiles}
+  result: null,          // {groups, totalFiles}
+  groupOpts: {},         // gi -> 'first'|'last'|'skip'|'manual'
+  groupManualKeep: {},   // gi -> path of manually chosen KEEP entry
+  groupFilter: 'all',    // 'all'|'first'|'last'|'skip'|'manual'
+  groupSearch: '',       // path fragment filter
 };
 
 // ─── Log ──────────────────────────────────────────────────────────────────────
@@ -482,6 +597,14 @@ const Cache = {
       const tx = this._db.transaction('h','readwrite');
       tx.objectStore('h').put({ k: this._key(p,s,m), v: sha });
       tx.oncomplete = res; tx.onerror = res;
+    });
+  },
+  async count() {
+    await this._open();
+    return new Promise(res => {
+      const r = this._db.transaction('h','readonly').objectStore('h').count();
+      r.onsuccess = e => res(e.target.result);
+      r.onerror = () => res(0);
     });
   },
   async clear() {
@@ -557,16 +680,33 @@ function loadSettings() {
 }
 
 // ─── Resume Banner ────────────────────────────────────────────────────────────
+async function updateCacheStats() {
+  try {
+    const n = await Cache.count();
+    const label = document.getElementById('cache-count-label');
+    if (label) label.textContent = n > 0 ? `${n.toLocaleString()} hashes cached` : 'Cache empty';
+  } catch(_) {}
+}
+
+async function clearHashCache() {
+  if (!confirm('Clear the hash cache?\n\nThe next scan will re-hash all files (slower). Cached hashes from previous sessions will be lost.')) return;
+  await Cache.clear();
+  Log.info('Hash cache cleared.');
+  await updateCacheStats();
+}
+
 async function checkForSession() {
   try {
+    await updateCacheStats();
     const data = await Session.load();
     if (!data || !data.handles?.length) return;
     const ago = Math.round((Date.now() - data.savedAt) / 60000);
     const agoStr = ago < 1 ? 'just now' : ago < 60 ? `${ago}m ago` : `${Math.round(ago/60)}h ago`;
+    const cached = await Cache.count();
+    const cacheStr = cached > 0 ? ` · ${cached.toLocaleString()} hashes cached` : '';
     document.getElementById('rb-desc').textContent =
-      `${data.handles.length} source(s) saved ${agoStr}`;
-    const banner = document.getElementById('resume-banner');
-    banner.classList.add('visible');
+      `${data.handles.length} source(s) saved ${agoStr}${cacheStr}`;
+    document.getElementById('resume-banner').classList.add('visible');
   } catch(_) {}
 }
 
@@ -739,14 +879,17 @@ async function findDuplicates(files, useCache, onProgress, stopRef, minSizeBytes
   const pool = new WorkerPool(poolSize);
   Log.info(`Hashing with ${poolSize} workers, read concurrency ${READ_CONCURRENCY}…`);
 
-  let permErrors = 0, oomErrors = 0;
+  let permErrors = 0, oomErrors = 0, cacheHits = 0, cacheMisses = 0;
 
   // Pass 2: hash candidates — bounded concurrency so we never hold 200k buffers in RAM
   await withConcurrency(candidates, READ_CONCURRENCY, async entry => {
     if (stopRef.stop) return;
     try {
       let sha = useCache ? await Cache.get(entry.path, entry.size, entry.mtime) : null;
-      if (!sha) {
+      if (sha) {
+        cacheHits++;
+      } else {
+        cacheMisses++;
         // Helper: read file buffer with one retry on transient lock errors
         const readBuf = async () => {
           try {
@@ -788,6 +931,11 @@ async function findDuplicates(files, useCache, onProgress, stopRef, minSizeBytes
   if (oomErrors > 0)
     Log.warn(`${oomErrors} file(s) too large for browser memory — open the Python version to hash files over ~1.5 GB.`);
 
+  if (useCache && (cacheHits + cacheMisses) > 0) {
+    const pct = Math.round(cacheHits / (cacheHits + cacheMisses) * 100);
+    Log.info(`Hash cache: ${cacheHits.toLocaleString()} hits (${pct}%), ${cacheMisses.toLocaleString()} freshly hashed.`);
+  }
+
   pool.terminate();
 
   // Build groups: original = oldest mtime, tie-break alphabetical path
@@ -799,26 +947,52 @@ async function findDuplicates(files, useCache, onProgress, stopRef, minSizeBytes
   }
   groups.sort((a,b) => b.duplicates.length - a.duplicates.length);
 
-  return { groups, totalFiles: files.length };
+  return { groups, totalFiles: files.length, cacheHits, cacheMisses };
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
+function sanitizeFSName(n) {
+  // FileSystem API rejects names containing / \ : * ? " < > | or that are empty
+  const s = n.replace(/[/\\:*?"<>|\0]/g, '_').trim();
+  return s || '_';
+}
+
 async function getOrCreateDir(handle, parts) {
   let cur = handle;
   for (const p of parts) cur = await cur.getDirectoryHandle(p, {create:true});
   return cur;
 }
 
-async function moveDuplicates(groups, primaryHandle, onProgress) {
+function resolveEffectiveDupes(g, gi, groupOpts) {
+  const opt = groupOpts[gi] ?? 'first';
+  if (opt === 'skip') return [];
+  const all = [g.original, ...g.duplicates];
+  if (opt === 'last') {
+    const sorted = [...all].sort((a,b) => b.mtime - a.mtime || a.path.localeCompare(b.path));
+    return sorted.slice(1);
+  }
+  if (opt === 'manual') {
+    const keptPath = state.groupManualKeep[gi];
+    const kept = all.find(e => e.path === keptPath) ?? g.original;
+    return all.filter(e => e !== kept);
+  }
+  return g.duplicates; // 'first'
+}
+
+async function moveDuplicates(groups, groupOpts, primaryHandle, onProgress) {
   let done = 0, failed = 0;
-  const total = groups.reduce((s,g) => s + g.duplicates.length, 0);
+  const effectiveGroups = groups.map((g, gi) => resolveEffectiveDupes(g, gi, groupOpts));
+  const total = effectiveGroups.reduce((s,d) => s + d.length, 0);
   const dupcRoot = await getOrCreateDir(primaryHandle, ['.dupcleaner', 'duplicates']);
 
-  for (const group of groups) {
-    for (const entry of group.duplicates) {
+  for (const dupes of effectiveGroups) {
+    for (const entry of dupes) {
       try {
         const pathParts = entry.relativePath.split('/').slice(0,-1);
-        const destDir = await getOrCreateDir(dupcRoot, [entry.rootName, ...pathParts]);
+        const safeParts = [entry.rootName, ...pathParts]
+          .map(sanitizeFSName)
+          .filter(Boolean);
+        const destDir = await getOrCreateDir(dupcRoot, safeParts);
         const file = await entry.handle.getFile();
         const buf = await file.arrayBuffer();
         const destH = await destDir.getFileHandle(entry.name, {create:true});
@@ -837,11 +1011,12 @@ async function moveDuplicates(groups, primaryHandle, onProgress) {
   return {done, failed};
 }
 
-async function deleteDuplicates(groups, onProgress) {
+async function deleteDuplicates(groups, groupOpts, onProgress) {
   let done = 0, failed = 0;
-  const total = groups.reduce((s,g) => s + g.duplicates.length, 0);
-  for (const group of groups) {
-    for (const entry of group.duplicates) {
+  const effectiveGroups = groups.map((g, gi) => resolveEffectiveDupes(g, gi, groupOpts));
+  const total = effectiveGroups.reduce((s,d) => s + d.length, 0);
+  for (const dupes of effectiveGroups) {
+    for (const entry of dupes) {
       try {
         await entry.parentHandle.removeEntry(entry.name);
         Log.info(`Deleted: ${entry.path}`);
@@ -939,6 +1114,259 @@ function setMetrics(result) {
   document.getElementById('m-unique').textContent = result ? unique : '—';
 }
 
+function isGroupVisible(gi) {
+  if (state.groupFilter !== 'all' && getGroupKeepMode(gi) !== state.groupFilter) return false;
+  if (state.groupSearch) {
+    const q = state.groupSearch.toLowerCase();
+    return getAllEntries(gi).some(e => e.path.toLowerCase().includes(q));
+  }
+  return true;
+}
+
+function applyVisibility() {
+  if (!state.result) return;
+  let visible = 0;
+  const total = state.result.groups.length;
+  state.result.groups.forEach((_, gi) => {
+    const el = document.getElementById(`g${gi}`);
+    if (!el) return;
+    const show = isGroupVisible(gi);
+    el.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  // Update search status
+  const status = document.getElementById('search-status');
+  if (status) {
+    if (state.groupSearch) {
+      if (visible === 0) {
+        status.textContent = 'No matches'; status.className = 'search-status miss';
+      } else {
+        status.textContent = `${visible} of ${total} groups`; status.className = 'search-status hit';
+      }
+    } else {
+      status.textContent = ''; status.className = 'search-status';
+    }
+  }
+  // Update "Set all" label to indicate scope
+  const lbl = document.getElementById('setall-label');
+  if (lbl) {
+    if (state.groupSearch || state.groupFilter !== 'all') {
+      lbl.textContent = `Set ${visible} visible`; lbl.classList.add('setall-active');
+    } else {
+      lbl.textContent = 'Set all'; lbl.classList.remove('setall-active');
+    }
+  }
+}
+
+// kept as alias so callers that use applyFilter() still work
+function applyFilter() { applyVisibility(); }
+
+function updateControlsBar() {
+  if (!state.result) return;
+  const counts = { first: 0, last: 0, skip: 0, manual: 0 };
+  state.result.groups.forEach((_, gi) => {
+    const m = getGroupKeepMode(gi);
+    counts[m] = (counts[m] ?? 0) + 1;
+  });
+  const total = state.result.groups.length;
+  document.getElementById('fc-all').textContent    = total;
+  document.getElementById('fc-first').textContent  = counts.first;
+  document.getElementById('fc-last').textContent   = counts.last;
+  document.getElementById('fc-skip').textContent   = counts.skip;
+  document.getElementById('fc-manual').textContent = counts.manual;
+  const filterMap = { all:'af', first:'ag', last:'ab', skip:'ay', manual:'ap' };
+  ['all','first','last','skip','manual'].forEach(f => {
+    const btn = document.getElementById(`filter-${f}`);
+    if (!btn) return;
+    btn.classList.remove('af','ag','ab','ay','ap');
+    if (state.groupFilter === f) btn.classList.add(filterMap[f]);
+  });
+}
+
+function setGroupSearch(q) {
+  state.groupSearch = q.trim();
+  const clear = document.getElementById('search-clear');
+  if (clear) clear.classList.toggle('visible', !!state.groupSearch);
+  applyVisibility();
+}
+
+function clearGroupSearch() {
+  state.groupSearch = '';
+  const inp = document.getElementById('group-search');
+  if (inp) inp.value = '';
+  const clear = document.getElementById('search-clear');
+  if (clear) clear.classList.remove('visible');
+  applyVisibility();
+}
+
+function populateSearchSuggestions() {
+  if (!state.result) return;
+  const segments = new Set();
+  state.result.groups.forEach(g => {
+    [g.original, ...g.duplicates].forEach(e => {
+      e.path.split('/').filter(p => p && p !== '\\').slice(0, -1).forEach(p => segments.add(p));
+    });
+  });
+  const dl = document.getElementById('search-suggestions');
+  if (dl) dl.innerHTML = [...segments].sort().map(s => `<option value="${s}">`).join('');
+}
+
+function _applyOptToAll(optsMap) {
+  // optsMap: gi -> opt (or gi -> {opt, manualPath})
+  Object.entries(optsMap).forEach(([gi, v]) => {
+    gi = Number(gi);
+    const opt  = typeof v === 'string' ? v : v.opt;
+    const path = typeof v === 'object'  ? v.path : null;
+    state.groupOpts[gi] = opt;
+    if (opt === 'manual' && path) state.groupManualKeep[gi] = path;
+    else delete state.groupManualKeep[gi];
+    const el = document.getElementById(`g${gi}`);
+    if (!el) return;
+    el.querySelectorAll('.opt-btn').forEach(b => b.classList.toggle('active', b.dataset.opt === opt && opt !== 'manual'));
+    const badge = el.querySelector('.opt-manual-badge');
+    if (opt === 'manual' && !badge) {
+      const b = document.createElement('span');
+      b.className = 'opt-manual-badge';
+      b.title = 'Manually pinned — click First/Last/Skip to reset';
+      b.textContent = '📌 pinned';
+      el.querySelector('.opt-btns')?.appendChild(b);
+    } else if (opt !== 'manual' && badge) badge.remove();
+    el.classList.toggle('skipped', opt === 'skip');
+    const body = document.getElementById(`gb${gi}`);
+    const wasOpen = body?.classList.contains('open');
+    if (body) { body.innerHTML = renderDupRows(gi); if (wasOpen) body.classList.add('open'); }
+  });
+  updateControlsBar();
+  applyFilter();
+}
+
+function setAllGroupOpts(opt) {
+  if (!state.result) return;
+  const map = {};
+  state.result.groups.forEach((_, gi) => {
+    if (isGroupVisible(gi)) map[gi] = opt;
+  });
+  _applyOptToAll(map);
+}
+
+function invertGroupOpts() {
+  if (!state.result) return;
+  const map = {};
+  state.result.groups.forEach((_, gi) => {
+    if (!isGroupVisible(gi)) return;
+    const cur = getGroupKeepMode(gi);
+    map[gi] = cur === 'first' ? 'last' : cur === 'last' ? 'first' : 'first';
+  });
+  _applyOptToAll(map);
+}
+
+
+function setGroupFilter(f) {
+  state.groupFilter = f;
+  updateControlsBar();
+  applyFilter();
+}
+
+function getGroupKeepMode(gi) {
+  return state.groupOpts[gi] ?? 'first';
+}
+
+function getAllEntries(gi) {
+  const g = state.result.groups[gi];
+  return [g.original, ...g.duplicates];
+}
+
+function getEffectiveKept(gi) {
+  const g = state.result.groups[gi];
+  const opt = getGroupKeepMode(gi);
+  if (opt === 'skip') return null;
+  if (opt === 'last') {
+    const all = getAllEntries(gi);
+    return [...all].sort((a,b) => b.mtime - a.mtime || a.path.localeCompare(b.path))[0];
+  }
+  if (opt === 'manual') {
+    const all = getAllEntries(gi);
+    return all.find(e => e.path === state.groupManualKeep[gi]) ?? g.original;
+  }
+  return g.original; // 'first'
+}
+
+function getEffectiveDupes(gi) {
+  const opt = getGroupKeepMode(gi);
+  if (opt === 'skip') return [];
+  const kept = getEffectiveKept(gi);
+  return getAllEntries(gi).filter(e => e !== kept);
+}
+
+function renderDupRows(gi) {
+  const opt = getGroupKeepMode(gi);
+  if (opt === 'skip') {
+    return `<div class="dup-row skip-note">⊘ Skipped — this group will not be touched</div>`;
+  }
+  const kept  = getEffectiveKept(gi);
+  const dupes = getEffectiveDupes(gi);
+  // Escape path for inline onclick
+  const esc = p => p.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return [
+    `<div class="dup-row">
+      <span class="kind kind-orig" title="This file will be kept">KEEP</span>
+      <span class="dp" title="${kept.path}">${kept.path}</span>
+      <span class="dt">${fmtDate(kept.mtime)}</span>
+    </div>`,
+    ...dupes.map(d => `
+      <div class="dup-row">
+        <span class="kind kind-dup pickable" onclick="promoteToKeep(${gi},'${esc(d.path)}')" title="Click to keep this file instead">DUP</span>
+        <span class="dp" title="${d.path}">${d.path}</span>
+        <span class="dt">${fmtDate(d.mtime)}</span>
+      </div>`)
+  ].join('');
+}
+
+function promoteToKeep(gi, path) {
+  state.groupOpts[gi] = 'manual';
+  state.groupManualKeep[gi] = path;
+  const groupEl = document.getElementById(`g${gi}`);
+  if (!groupEl) return;
+  // No opt-btn is active in manual mode; show a pin badge
+  groupEl.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+  const badge = groupEl.querySelector('.opt-manual-badge');
+  if (!badge) {
+    const btns = groupEl.querySelector('.opt-btns');
+    const b = document.createElement('span');
+    b.className = 'opt-manual-badge';
+    b.title = 'Manually pinned — click First/Last/Skip to reset';
+    b.textContent = '📌 pinned';
+    btns.appendChild(b);
+  }
+  groupEl.classList.remove('skipped');
+  const body = document.getElementById(`gb${gi}`);
+  const wasOpen = body.classList.contains('open');
+  body.innerHTML = renderDupRows(gi);
+  if (wasOpen) body.classList.add('open');
+  updateControlsBar();
+  applyFilter();
+}
+
+function setGroupOpt(gi, opt) {
+  state.groupOpts[gi] = opt;
+  delete state.groupManualKeep[gi];
+  const groupEl = document.getElementById(`g${gi}`);
+  if (!groupEl) return;
+  groupEl.querySelectorAll('.opt-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.opt === opt);
+  });
+  // Remove manual badge if present
+  const badge = groupEl.querySelector('.opt-manual-badge');
+  if (badge) badge.remove();
+  groupEl.classList.toggle('skipped', opt === 'skip');
+  const body = document.getElementById(`gb${gi}`);
+  const wasOpen = body.classList.contains('open');
+  body.innerHTML = renderDupRows(gi);
+  if (wasOpen) body.classList.add('open');
+  updateControlsBar();
+  applyFilter();
+}
+
 function renderResults(result) {
   const header = document.getElementById('results-header');
   const list   = document.getElementById('groups-list');
@@ -948,10 +1376,13 @@ function renderResults(result) {
 
   setMetrics(result);
 
+  const ctrlBar = document.getElementById('controls-bar');
+
   if (!result || result.groups.length === 0) {
     header.style.display = 'none';
     list.innerHTML = '';
     actions.classList.remove('visible');
+    ctrlBar.classList.remove('visible');
     if (result && result.totalFiles > 0) {
       empty.innerHTML = '<div class="icon">✅</div><p>No duplicates found.</p>';
     }
@@ -962,38 +1393,35 @@ function renderResults(result) {
   empty.style.display = 'none';
   header.style.display = 'grid';
   actions.classList.add('visible');
+  ctrlBar.classList.add('visible');
 
   const primary = state.sources[0];
   note.textContent = primary ? `Output: ${primary.name}/.dupcleaner/` : '';
 
   list.innerHTML = result.groups.map((g, gi) => {
-    const dupRows = [
-      `<div class="dup-row">
-        <span class="kind kind-orig">KEEP</span>
-        <span class="dp" title="${g.original.path}">${g.original.path}</span>
-        <span class="dt">${fmtDate(g.original.mtime)}</span>
-      </div>`,
-      ...g.duplicates.map(d => `
-        <div class="dup-row">
-          <span class="kind kind-dup">DUP</span>
-          <span class="dp" title="${d.path}">${d.path}</span>
-          <span class="dt">${fmtDate(d.mtime)}</span>
-        </div>`),
-    ].join('');
-
+    const opt = getGroupKeepMode(gi);
     return `
-      <div class="group" id="g${gi}">
+      <div class="group${opt === 'skip' ? ' skipped' : ''}" id="g${gi}">
         <div class="group-header" onclick="toggleGroup(${gi})">
           <span class="path" title="${g.original.path}">
             ${g.original.name}<span class="badge">${g.duplicates.length} dup${g.duplicates.length>1?'s':''}</span>
+          </span>
+          <span class="opt-btns" onclick="event.stopPropagation()">
+            <button class="opt-btn${opt==='first'?' active':''}" data-opt="first" onclick="setGroupOpt(${gi},'first')" title="Keep the oldest file">First</button>
+            <button class="opt-btn${opt==='last'?' active':''}" data-opt="last" onclick="setGroupOpt(${gi},'last')" title="Keep the newest file">Last</button>
+            <button class="opt-btn skip-btn${opt==='skip'?' active':''}" data-opt="skip" onclick="setGroupOpt(${gi},'skip')" title="Skip this group">Skip</button>
           </span>
           <span class="size">${humanSize(g.size)}</span>
           <span class="count">${g.duplicates.length + 1}</span>
           <span class="hash">${g.sha256.slice(0,16)}…</span>
         </div>
-        <div class="group-body" id="gb${gi}">${dupRows}</div>
+        <div class="group-body" id="gb${gi}">${renderDupRows(gi)}</div>
       </div>`;
   }).join('');
+
+  updateControlsBar();
+  applyVisibility();
+  populateSearchSuggestions();
 }
 
 function toggleGroup(i) {
@@ -1107,11 +1535,21 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
       }
     }
 
-    Log.info(
-      `Done. ${result.groups.length} group(s), ` +
-      `${result.groups.reduce((s,g)=>s+g.duplicates.length,0)} duplicate(s).`
-    );
+    state.groupOpts = {};
+    state.groupManualKeep = {};
+    state.groupFilter = 'all';
+    state.groupSearch = '';
+    const si = document.getElementById('group-search');
+    if (si) si.value = '';
+    const sc = document.getElementById('search-clear');
+    if (sc) sc.classList.remove('visible');
+    const dupCount = result.groups.reduce((s,g)=>s+g.duplicates.length,0);
+    const cacheNote = (result.cacheHits > 0)
+      ? ` (${result.cacheHits.toLocaleString()} from cache, ${result.cacheMisses.toLocaleString()} hashed)`
+      : '';
+    Log.info(`Done. ${result.groups.length} group(s), ${dupCount} duplicate(s).${cacheNote}`);
     renderResults(result);
+    await updateCacheStats();
 
   } catch(e) {
     Log.error(`Scan error: ${e.message}`);
@@ -1132,7 +1570,7 @@ document.getElementById('btn-move').addEventListener('click', async () => {
   setProgress('Moving duplicates…', 0);
   try {
     const {done, failed} = await moveDuplicates(
-      state.result.groups, primary,
+      state.result.groups, state.groupOpts, primary,
       (n, total) => setProgress(`Moving ${n}/${total}…`, Math.round(n/total*100))
     );
     Log.info(`Move complete: ${done} moved, ${failed} failed.`);
@@ -1147,14 +1585,17 @@ document.getElementById('btn-move').addEventListener('click', async () => {
 
 document.getElementById('btn-delete').addEventListener('click', async () => {
   if (!state.result?.groups.length) return;
-  const total = state.result.groups.reduce((s,g)=>s+g.duplicates.length,0);
+  const total = state.result.groups.reduce((s,g,gi) => {
+    const opt = state.groupOpts[gi] ?? 'first';
+    return s + (opt === 'skip' ? 0 : g.duplicates.length);
+  }, 0);
   if (!confirm(`Permanently delete ${total} duplicate file(s)?\n\nOriginals will be kept. This CANNOT be undone.`)) return;
 
   setScanningState(true);
   setProgress('Deleting duplicates…', 0);
   try {
     const {done, failed} = await deleteDuplicates(
-      state.result.groups,
+      state.result.groups, state.groupOpts,
       (n, t) => setProgress(`Deleting ${n}/${t}…`, Math.round(n/t*100))
     );
     Log.info(`Delete complete: ${done} deleted, ${failed} failed.`);

@@ -4,7 +4,7 @@
     {
       "name": "dupcleaner-web",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "3737", "--directory", "J:\\dupcleaner-web"],
+      "runtimeArgs": ["-m", "http.server", "3737", "--directory", "C:\\Users\\Akash\\Desktop\\dupcleaner-web"],
       "port": 3737
     }
   ]
