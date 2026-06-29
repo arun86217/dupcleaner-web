@@ -11,12 +11,10 @@ Find and remove duplicate files directly in your browser. No install, no Python,
 ## Quick start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/dupcleaner-web.git
+git clone https://github.com/arun86217/dupcleaner-web.git
 cd dupcleaner-web
 # Then open index.html in Chrome or Edge
 ```
-
-Or use the live version on GitHub Pages: `https://YOUR_USERNAME.github.io/dupcleaner-web`
 
 ---
 
