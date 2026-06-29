@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dupcleaner-web",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3737", "--directory", "J:\\dupcleaner-web"],
+      "port": 3737
+    }
+  ]
+}

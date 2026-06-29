@@ -665,7 +665,15 @@ async function scanDirectory(rootHandle, excludedNames, extFilter, onFile, stopR
     for await (const [name, entry] of dir.entries()) {
       if (stopRef.stop) return;
       if (entry.kind === 'directory') {
-        if (!excluded.has(name)) await walk(entry, rel ? `${rel}/${name}` : name);
+        if (!excluded.has(name)) {
+          try {
+            await walk(entry, rel ? `${rel}/${name}` : name);
+          } catch(e) {
+            const dirPath = `${rootHandle.name}${rel ? '/'+rel : ''}/${name}`;
+            const hint = dirPath.length > 240 ? ' (path too long — Windows 260-char limit)' : '';
+            Log.warn(`Skipped directory ${dirPath}: ${e.message}${hint}`);
+          }
+        }
       } else {
         if (allowedExts) {
           const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
@@ -684,7 +692,11 @@ async function scanDirectory(rootHandle, excludedNames, extFilter, onFile, stopR
             size: file.size,
             mtime: file.lastModified,
           });
-        } catch(e) { Log.warn(`Skipped ${name}: ${e.message}`); }
+        } catch(e) {
+            const fullPath = `${rootHandle.name}${rel ? '/'+rel : ''}/${name}`;
+            const hint = fullPath.length > 240 ? ' (path too long — Windows 260-char limit)' : '';
+            Log.warn(`Skipped ${fullPath}: ${e.message}${hint}`);
+          }
       }
     }
   }
@@ -1088,7 +1100,11 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
 
     // Auto-save reports into first source's .dupcleaner/reports/
     if (result.groups.length > 0 && state.sources[0]) {
-      await saveReports(result.groups, result.totalFiles, state.sources[0].handle);
+      try {
+        await saveReports(result.groups, result.totalFiles, state.sources[0].handle);
+      } catch(e) {
+        Log.warn(`Could not auto-save report: ${e.message}`);
+      }
     }
 
     Log.info(
