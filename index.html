@@ -161,6 +161,7 @@ main{display:flex;flex-direction:column;overflow:hidden}
 .ctrl-btn.ab{background:rgba(139,92,246,.2);color:#a78bfa;border-color:rgba(139,92,246,.4)}
 .ctrl-btn.ay{background:rgba(234,179,8,.12);color:#eab308;border-color:rgba(234,179,8,.35)}
 .ctrl-btn.ap{background:rgba(236,72,153,.15);color:#f472b6;border-color:rgba(236,72,153,.35)}
+.ctrl-btn.as{background:rgba(245,158,11,.12);color:var(--warn);border-color:rgba(245,158,11,.35)}
 .ctrl-count{font-size:10px;background:rgba(0,0,0,.25);padding:1px 5px;border-radius:3px;line-height:1.4}
 /* search row */
 .search-wrap{display:flex;align-items:center;background:var(--bg3);
@@ -397,7 +398,14 @@ build
         </div>
         <span class="search-status" id="search-status"></span>
       </div>
-      <!-- Row 2: actions + mode filter -->
+      <!-- Row 2: sort -->
+      <div class="ctrl-row">
+        <span class="ctrl-label">Sort by</span>
+        <button class="ctrl-btn as" id="sort-dupes"     onclick="setSortOrder('dupes')">Most dupes</button>
+        <button class="ctrl-btn"    id="sort-size-desc" onclick="setSortOrder('size-desc')">↓ Largest size</button>
+        <button class="ctrl-btn"    id="sort-size-asc"  onclick="setSortOrder('size-asc')">↑ Smallest size</button>
+      </div>
+      <!-- Row 3: actions + mode filter -->
       <div class="ctrl-row ctrl-action-row">
         <div class="ctrl-section">
           <span class="ctrl-label" id="setall-label">Set all</span>
@@ -544,11 +552,13 @@ const state = {
   sources: [],           // [{name, handle}]
   scanning: false,
   stopFlag: false,
+  stopRef: null,         // shared {stop} ref so btn-stop can abort mid-walk
   result: null,          // {groups, totalFiles}
   groupOpts: {},         // gi -> 'first'|'last'|'skip'|'manual'
   groupManualKeep: {},   // gi -> path of manually chosen KEEP entry
   groupFilter: 'all',    // 'all'|'first'|'last'|'skip'|'manual'
   groupSearch: '',       // path fragment filter
+  sortOrder: 'dupes',    // 'dupes'|'size-desc'|'size-asc'
 };
 
 // ─── Log ──────────────────────────────────────────────────────────────────────
@@ -722,7 +732,11 @@ document.getElementById('btn-resume').addEventListener('click', async () => {
         const perm = await handle.requestPermission({ mode: 'readwrite' });
         if (perm === 'granted') {
           const name = data.names?.[i] ?? handle.name;
-          if (!state.sources.find(s => s.name === name)) {
+          let isDup = false;
+          for (const s of state.sources) {
+            if (await s.handle.isSameEntry(handle)) { isDup = true; break; }
+          }
+          if (!isDup) {
             state.sources.push({ name, handle });
             restored++;
           }
@@ -1083,6 +1097,46 @@ function getMinSizeBytes() {
 }
 
 // ─── UI Rendering ─────────────────────────────────────────────────────────────
+function getSortedIndices(result) {
+  const indices = result.groups.map((_, i) => i);
+  if (state.sortOrder === 'size-desc') {
+    indices.sort((a, b) => result.groups[b].size - result.groups[a].size);
+  } else if (state.sortOrder === 'size-asc') {
+    indices.sort((a, b) => result.groups[a].size - result.groups[b].size);
+  }
+  // 'dupes': already sorted by findDuplicates (most dupes first)
+  return indices;
+}
+
+function setSortOrder(order) {
+  state.sortOrder = order;
+  ['dupes', 'size-desc', 'size-asc'].forEach(o => {
+    document.getElementById(`sort-${o}`)?.classList.toggle('as', o === order);
+  });
+  if (state.result) renderResults(state.result);
+}
+
+function renderGroupHTML(gi, g) {
+  const opt = getGroupKeepMode(gi);
+  return `
+    <div class="group${opt === 'skip' ? ' skipped' : ''}" id="g${gi}">
+      <div class="group-header" onclick="toggleGroup(${gi})">
+        <span class="path" title="${g.original.path}">
+          ${g.original.name}<span class="badge">${g.duplicates.length} dup${g.duplicates.length>1?'s':''}</span>
+        </span>
+        <span class="opt-btns" onclick="event.stopPropagation()">
+          <button class="opt-btn${opt==='first'?' active':''}" data-opt="first" onclick="setGroupOpt(${gi},'first')" title="Keep the oldest file">First</button>
+          <button class="opt-btn${opt==='last'?' active':''}" data-opt="last" onclick="setGroupOpt(${gi},'last')" title="Keep the newest file">Last</button>
+          <button class="opt-btn skip-btn${opt==='skip'?' active':''}" data-opt="skip" onclick="setGroupOpt(${gi},'skip')" title="Skip this group">Skip</button>
+        </span>
+        <span class="size">${humanSize(g.size)}</span>
+        <span class="count">${g.duplicates.length + 1}</span>
+        <span class="hash">${g.sha256.slice(0,16)}…</span>
+      </div>
+      <div class="group-body" id="gb${gi}">${renderDupRows(gi)}</div>
+    </div>`;
+}
+
 function renderSources() {
   const el = document.getElementById('source-list');
   if (state.sources.length === 0) {
@@ -1367,16 +1421,17 @@ function setGroupOpt(gi, opt) {
   applyFilter();
 }
 
+let _renderToken = 0;
+
 function renderResults(result) {
   const header = document.getElementById('results-header');
   const list   = document.getElementById('groups-list');
   const empty  = document.getElementById('empty-state');
   const actions= document.getElementById('actions-bar');
   const note   = document.getElementById('action-note');
+  const ctrlBar = document.getElementById('controls-bar');
 
   setMetrics(result);
-
-  const ctrlBar = document.getElementById('controls-bar');
 
   if (!result || result.groups.length === 0) {
     header.style.display = 'none';
@@ -1398,30 +1453,30 @@ function renderResults(result) {
   const primary = state.sources[0];
   note.textContent = primary ? `Output: ${primary.name}/.dupcleaner/` : '';
 
-  list.innerHTML = result.groups.map((g, gi) => {
-    const opt = getGroupKeepMode(gi);
-    return `
-      <div class="group${opt === 'skip' ? ' skipped' : ''}" id="g${gi}">
-        <div class="group-header" onclick="toggleGroup(${gi})">
-          <span class="path" title="${g.original.path}">
-            ${g.original.name}<span class="badge">${g.duplicates.length} dup${g.duplicates.length>1?'s':''}</span>
-          </span>
-          <span class="opt-btns" onclick="event.stopPropagation()">
-            <button class="opt-btn${opt==='first'?' active':''}" data-opt="first" onclick="setGroupOpt(${gi},'first')" title="Keep the oldest file">First</button>
-            <button class="opt-btn${opt==='last'?' active':''}" data-opt="last" onclick="setGroupOpt(${gi},'last')" title="Keep the newest file">Last</button>
-            <button class="opt-btn skip-btn${opt==='skip'?' active':''}" data-opt="skip" onclick="setGroupOpt(${gi},'skip')" title="Skip this group">Skip</button>
-          </span>
-          <span class="size">${humanSize(g.size)}</span>
-          <span class="count">${g.duplicates.length + 1}</span>
-          <span class="hash">${g.sha256.slice(0,16)}…</span>
-        </div>
-        <div class="group-body" id="gb${gi}">${renderDupRows(gi)}</div>
-      </div>`;
-  }).join('');
+  // Chunked rendering — yields between batches so the browser stays responsive
+  list.innerHTML = '';
+  const indices = getSortedIndices(result);
+  const CHUNK = 50;
+  let i = 0;
+  const myToken = ++_renderToken;
 
-  updateControlsBar();
-  applyVisibility();
-  populateSearchSuggestions();
+  function renderChunk() {
+    if (_renderToken !== myToken) return; // superseded by a newer renderResults call
+    const end = Math.min(i + CHUNK, indices.length);
+    const html = [];
+    for (; i < end; i++) {
+      html.push(renderGroupHTML(indices[i], result.groups[indices[i]]));
+    }
+    list.insertAdjacentHTML('beforeend', html.join(''));
+    if (i < indices.length) {
+      setTimeout(renderChunk, 0);
+    } else {
+      updateControlsBar();
+      applyVisibility();
+      populateSearchSuggestions();
+    }
+  }
+  renderChunk();
 }
 
 function toggleGroup(i) {
@@ -1452,11 +1507,17 @@ document.getElementById('btn-add').addEventListener('click', async () => {
   }
   try {
     const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    if (!state.sources.find(s => s.name === handle.name)) {
+    let isDup = false;
+    for (const s of state.sources) {
+      if (await s.handle.isSameEntry(handle)) { isDup = true; break; }
+    }
+    if (!isDup) {
       state.sources.push({ name: handle.name, handle });
       renderSources();
       Session.saveHandles(state.sources);
       Log.info(`Added source: ${handle.name}`);
+    } else {
+      Log.warn(`Folder already added: ${handle.name}`);
     }
   } catch(e) {
     if (e.name !== 'AbortError') Log.error(`Could not add folder: ${e.message}`);
@@ -1465,6 +1526,7 @@ document.getElementById('btn-add').addEventListener('click', async () => {
 
 document.getElementById('btn-stop').addEventListener('click', () => {
   state.stopFlag = true;
+  if (state.stopRef) state.stopRef.stop = true;
   Log.warn('Stop requested…');
 });
 
@@ -1484,6 +1546,7 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
   document.getElementById('empty-state').style.display = 'none';
 
   const stopRef = { stop: false };
+  state.stopRef = stopRef;
   const extFilter    = ExtFilter.getFilter();
   const excluded     = getExclusions();
   const useCache     = document.getElementById('use-cache').checked;
@@ -1554,6 +1617,7 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
   } catch(e) {
     Log.error(`Scan error: ${e.message}`);
   } finally {
+    state.stopRef = null;
     setScanningState(false);
     setProgress('', 0, false);
   }
