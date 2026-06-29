@@ -87,6 +87,18 @@ textarea:focus,input:focus{outline:none;border-color:var(--accent)}
 .checkbox-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-top:10px}
 .checkbox-row input{accent-color:var(--accent);width:14px;height:14px}
 
+/* ── Extension filter chips ── */
+.ext-all-row{margin-bottom:6px}
+.ext-group-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.6px;margin:6px 0 3px}
+.ext-grid{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:2px}
+.ext-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:12px;
+  font-size:11px;cursor:pointer;user-select:none;color:var(--muted);transition:.1s}
+.ext-chip input{accent-color:var(--accent);width:11px;height:11px;margin:0;cursor:pointer}
+.ext-chip:hover{border-color:var(--accent);color:var(--text)}
+.ext-chip.on{border-color:var(--accent);background:rgba(99,102,241,.15);color:var(--accent-h)}
+
 /* ── Main content ── */
 main{display:flex;flex-direction:column;overflow:hidden}
 
@@ -234,8 +246,8 @@ div.sep{height:1px;background:var(--border);margin:12px 0}
         </select>
       </div>
 
-      <label for="ext-filter">Extension filter (* = all)</label>
-      <input type="text" id="ext-filter" value="*" placeholder="jpg,png,mp4">
+      <div class="section-title" style="margin-top:10px">Extension Filter</div>
+      <div id="ext-filter-panel"></div>
 
       <label for="exclusions">Excluded folder names (one per line)</label>
       <textarea id="exclusions" rows="8">venv
@@ -322,6 +334,99 @@ build
 
 <script>
 'use strict';
+
+// ─── Extension Filter ─────────────────────────────────────────────────────────
+const KNOWN_EXTS = {
+  Images:   ['jpg','jpeg','png','gif','webp','bmp','svg','tiff','ico','heic','avif'],
+  Videos:   ['mp4','mov','avi','mkv','wmv','flv','m4v','webm','ts'],
+  Audio:    ['mp3','wav','flac','aac','ogg','m4a','wma','opus'],
+  Docs:     ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','md','csv','rtf'],
+  Archives: ['zip','rar','7z','tar','gz','bz2','xz','zst'],
+};
+const ALL_KNOWN = new Set(Object.values(KNOWN_EXTS).flat());
+
+const ExtFilter = {
+  _all: true,
+  _checked: {},     // known ext → bool
+  _discovered: {},  // unknown ext → bool (persisted across sessions)
+
+  load() {
+    try {
+      const d = JSON.parse(localStorage.getItem('dupcleaner_ext') || '{}');
+      this._all        = d.all        ?? true;
+      this._checked    = d.checked    ?? {};
+      this._discovered = d.discovered ?? {};
+    } catch(_) {}
+    this._render();
+  },
+
+  save() {
+    try {
+      localStorage.setItem('dupcleaner_ext', JSON.stringify({
+        all: this._all, checked: this._checked, discovered: this._discovered,
+      }));
+    } catch(_) {}
+  },
+
+  getFilter() {
+    if (this._all) return '*';
+    const on = [
+      ...Object.entries(this._checked).filter(([,v])=>v).map(([k])=>k),
+      ...Object.entries(this._discovered).filter(([,v])=>v).map(([k])=>k),
+    ];
+    return on.length ? on.join(',') : '*';
+  },
+
+  updateDiscovered(files) {
+    let changed = false;
+    for (const f of files) {
+      if (!f.name.includes('.')) continue;
+      const ext = f.name.split('.').pop().toLowerCase();
+      if (!ALL_KNOWN.has(ext) && !(ext in this._discovered)) {
+        this._discovered[ext] = false;
+        changed = true;
+      }
+    }
+    if (changed) { this.save(); this._render(); }
+  },
+
+  toggleAll(val) { this._all = val; this.save(); this._render(); },
+  toggle(ext, discovered) {
+    if (discovered) this._discovered[ext] = !this._discovered[ext];
+    else            this._checked[ext]    = !this._checked[ext];
+    this.save(); this._render();
+  },
+
+  _chip(ext, on, discovered) {
+    return `<label class="ext-chip ${on?'on':''}" title=".${ext}">` +
+      `<input type="checkbox" ${on?'checked':''} ` +
+      `onchange="ExtFilter.toggle('${ext}',${discovered})"> .${ext}</label>`;
+  },
+
+  _render() {
+    const panel = document.getElementById('ext-filter-panel');
+    if (!panel) return;
+    const allOn = this._all;
+    let h = `<div class="ext-all-row">` +
+      `<label class="ext-chip ${allOn?'on':''}" style="border-radius:var(--r);font-size:12px;padding:4px 10px">` +
+      `<input type="checkbox" ${allOn?'checked':''} onchange="ExtFilter.toggleAll(this.checked)"> All files</label></div>`;
+
+    if (!allOn) {
+      for (const [group, exts] of Object.entries(KNOWN_EXTS)) {
+        h += `<div class="ext-group-label">${group}</div><div class="ext-grid">`;
+        for (const ext of exts) h += this._chip(ext, this._checked[ext]??false, false);
+        h += `</div>`;
+      }
+      const disc = Object.entries(this._discovered);
+      if (disc.length) {
+        h += `<div class="ext-group-label" style="margin-top:8px;color:var(--warn)">Discovered</div><div class="ext-grid">`;
+        for (const [ext, on] of disc) h += this._chip(ext, on, true);
+        h += `</div>`;
+      }
+    }
+    panel.innerHTML = h;
+  },
+};
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const state = {
@@ -432,7 +537,6 @@ const Session = {
 function saveSettings() {
   try {
     localStorage.setItem('dupcleaner_settings', JSON.stringify({
-      extFilter:   document.getElementById('ext-filter').value,
       exclusions:  document.getElementById('exclusions').value,
       minSize:     document.getElementById('min-size').value,
       minSizeUnit: document.getElementById('min-size-unit').value,
@@ -445,7 +549,6 @@ function loadSettings() {
     const raw = localStorage.getItem('dupcleaner_settings');
     if (!raw) return;
     const s = JSON.parse(raw);
-    if (s.extFilter   !== undefined) document.getElementById('ext-filter').value  = s.extFilter;
     if (s.exclusions  !== undefined) document.getElementById('exclusions').value  = s.exclusions;
     if (s.minSize     !== undefined) document.getElementById('min-size').value    = s.minSize;
     if (s.minSizeUnit !== undefined) document.getElementById('min-size-unit').value = s.minSizeUnit;
@@ -941,7 +1044,7 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
   document.getElementById('empty-state').style.display = 'none';
 
   const stopRef = { stop: false };
-  const extFilter    = document.getElementById('ext-filter').value;
+  const extFilter    = ExtFilter.getFilter();
   const excluded     = getExclusions();
   const useCache     = document.getElementById('use-cache').checked;
   const minSizeBytes = getMinSizeBytes();
@@ -964,6 +1067,7 @@ document.getElementById('btn-scan').addEventListener('click', async () => {
 
     if (state.stopFlag) { Log.warn('Scan stopped by user.'); return; }
 
+    ExtFilter.updateDiscovered(allFiles);
     Log.info(`Total files found: ${allFiles.length}`);
     setProgress(`Hashing candidates…`, 0);
     document.getElementById('progress-fill').classList.add('hashing');
@@ -1058,6 +1162,7 @@ document.getElementById('btn-report').addEventListener('click', async () => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 loadSettings();
+ExtFilter.load();
 renderSources();
 checkForSession();
 if (!window.showDirectoryPicker) {
